@@ -1,7 +1,7 @@
 # Two-Stage Flask OCR
 This is asimple python optical character recognition server. It's model consists of two parts - detection([CRAFT](https://gitee.com/tianyu__zhou/pyacl_samples/tree/a800/acl_craft_pt)) and recognition([text-regonition](https://gitee.com/tianyu__zhou/pyacl_samples/tree/a800/acl_deep_text_recognition_pt))
 
-**Warning !** This is a commercial application by Huawei Turkey (Copyright 2021)
+**Warning!** This is a commercial application by Huawei Turkey (Copyright 2021)
 
 <img alt="teaser" src="./figures/flask-api.png">
 
