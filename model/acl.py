@@ -35,8 +35,8 @@ class Model(object):
         self.thresholds = thresholds    # text_detect thresholds
         self.poly = poly
         self.model_id = None            # pointer
-        self.context = None             # pointer
-        self.stream = None
+        self.context  = None             # pointer
+        self.stream  = None
         self.input_data = None
         self.output_data = None
         self.model_desc = None          # pointer when using
@@ -79,22 +79,24 @@ class Model(object):
         
         
     def init_resource(self):
-        print("[ACL] init resource stage:")
-        acl.init()
-        
-        ret = acl.rt.set_device(self.device_id)
-        check_ret("acl.rt.set_device", ret)
+        if bool(acl.rt.get_device(0)[1]):
+            print("[ACL] init resource stage:")
+            acl.init()
 
-        self.context, ret = acl.rt.create_context(self.device_id)
-        check_ret("acl.rt.create_context", ret)
+            ret = acl.rt.set_device(self.device_id)
+            check_ret("acl.rt.set_device", ret)
 
-        self.stream, ret = acl.rt.create_stream()
-        check_ret("acl.rt.create_stream", ret)
-        print("[ACL] init resource stage success")
+            self.context, ret = acl.rt.create_context(self.device_id)
+            check_ret("acl.rt.create_context", ret)
+
+            self.stream, ret = acl.rt.create_stream()
+            check_ret("acl.rt.create_stream", ret)
+            print("[ACL] init resource stage success")
+
+            print("[MODEL] class Model init resource stage:")
+            # context
+            acl.rt.set_context(self.context)
         
-        print("[MODEL] class Model init resource stage:")
-        # context
-        acl.rt.set_context(self.context)
         # load_model
         self.model_id, ret = acl.mdl.load_from_file(self.model_path)
         check_ret("acl.mdl.load_from_file", ret)
