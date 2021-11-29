@@ -1,36 +1,31 @@
-# pyacl_ocr_api
+# Two-Stage Flask OCR
+This is asimple python optical character recognition server. It's model consists of two parts - detection([CRAFT](https://gitee.com/tianyu__zhou/pyacl_samples/tree/a800/acl_craft_pt)) and recognition([text-regonition](https://gitee.com/tianyu__zhou/pyacl_samples/tree/a800/acl_deep_text_recognition_pt))
 
-#### Description
-{**When you're done, you can delete the content in this README and update the file with details for others getting started with your repository**}
+**Warning !** This is a commercial application by Huawei Turkey (Copyright 2021)
 
-#### Software Architecture
-Software architecture description
+<img alt="teaser" src="./figures/flask-api.png">
 
-#### Installation
+## Getting started
+Install dependencies;
+- numpy
+- Pillow
+- opencv-python >= 3.4.2
+- scikit-image
+- flask
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+```
+pip install -r requirements.txt
+```
 
-#### Instructions
+### Run Server
+Open the terminal on the project path and then run the following command.
 
-1.  xxxx
-2.  xxxx
-3.  xxxx
+```bash
+python3 app.py --host=0.0.0.0 \
+                --port=9687 \
+                --detec-model=weights/craft.om \
+                --recog-model=weights/None-ResNet-None-CTC.om --device-id=0 \
+                --cfg=data/app.cfg
+```
 
-#### Contribution
-
-1.  Fork the repository
-2.  Create Feat_xxx branch
-3.  Commit your code
-4.  Create Pull Request
-
-
-#### Gitee Feature
-
-1.  You can use Readme\_XXX.md to support different languages, such as Readme\_en.md, Readme\_zh.md
-2.  Gitee blog [blog.gitee.com](https://blog.gitee.com)
-3.  Explore open source project [https://gitee.com/explore](https://gitee.com/explore)
-4.  The most valuable open source project [GVP](https://gitee.com/gvp)
-5.  The manual of Gitee [https://gitee.com/help](https://gitee.com/help)
-6.  The most popular members  [https://gitee.com/gitee-stars/](https://gitee.com/gitee-stars/)
+**Note :** Import `PyACL OCR REST-API.postman_collection.json` file to `postman` collections for easy demo

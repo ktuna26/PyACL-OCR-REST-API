@@ -131,10 +131,9 @@ class Model(object):
         
         
     def run(self, img, boxes_coord = None, cropped = False ): # Overloaded function
-        print(self.model_path)
         if  not cropped and boxes_coord is None :
             t0 = time.time()
-
+            
             # resize
             mag_ratio = round((self.model_input_width / self.model_input_height), 1)
             img_resized, target_ratio, size_heatmap = resize_aspect_ratio(img, self.model_input_width, cv2.INTER_LINEAR, mag_ratio)
@@ -159,7 +158,6 @@ class Model(object):
             y = self.get_model_output_by_index(0).reshape(-1,  self.model_output_height, 
                                                                                            self.model_output_width, 2)
             
-
             # make score and link map
             score_text = y[0,:,:,0]
             score_link = y[0,:,:,1]

@@ -27,9 +27,6 @@ from flask import Flask, json, Response, request
 
 
 # initialize the app
-thresholds = {"text_thresh":0.7, "link_thresh":0.4, "low_text":0.4}
-model1 = Model(0, './weights/craft.om', thresholds = thresholds)
-model2 = Model(0, './weights/None-ResNet-None-CTC.om', '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ')
 app = Flask(__name__)
 
 
@@ -46,15 +43,11 @@ def success_handle(output, status=200, mimetype='application/json'):
 def run_craft(image):
     print("[INFO] running CRAFT model . . .")
 
-    # read the image in PIL format
-    print("[INFO] loading image . . .")
-    img = image.read()
     # convert image format
-    img_rgb_plw = Image.open(BytesIO(img)).convert('RGB') 
-    img_rgb = np.array(img_rgb_plw)
+    img_rgb = np.array(image)
 
     # run model
-    bboxes, polys = model1.run(img_rgb)
+    bboxes, polys = app.detec_model.run(img_rgb)
 
     # get boxes coordinate
     boxes_coord = []
@@ -69,15 +62,11 @@ def run_craft(image):
 def run_text_reco(image, boxes_coord):
     print("[INFO] running Text-Recognition model . . .")
 
-    # read the image in PIL format
-    print("[INFO] loading image . . .")
-    img = image.read()
     # convert image format
-    img_rgb_plw = Image.open(BytesIO(img))
-    img_bgr = cvtColor(np.array(img_rgb_plw), COLOR_RGB2BGR)
+    img_bgr = cvtColor(np.array(image), COLOR_RGB2BGR)
 
     # run Text-Reco model
-    bboxes = model2.run(img_bgr, boxes_coord, cropped = app.cfg.getboolean('model', 'cropped'))
+    bboxes = app.recog_model.run(img_bgr, boxes_coord, cropped = app.cfg.getboolean('model', 'cropped'))
 
     # get text
     texts = ""
@@ -88,40 +77,30 @@ def run_text_reco(image, boxes_coord):
     return texts
 
 
-# OCR homepage
-@app.route('/ocr', methods = ['GET'])
-def ocr_home_page():
-    print("This is a simple OCR API\n[Copyright 2021 Huawei Technologies Co., Ltd]")
-    return success_handle(json.dumps({"Mesagge" : "Hello! Welcome to Huawei OCR API."}))
+# home page
+@app.route('/', methods = ['GET'])
+def home_page():
+    if request.method == 'GET': 
+        print("This is a simple OCR API [Copyright 2021 Huawei Technologies Co., Ltd]") # OCR
+        
+        print("CRAFT : Character-Region Awareness For Text Detection & Deep Text Detection\n \
+        [https://gitee.com/tianyu__zhou/pyacl_samples/tree/a800/acl_craft_pt]") # CRAFT
 
-# CRAFT homepage
-@app.route('/CRAFT', methods = ['GET'])
-def craft_home_page():
-    print("CRAFT : Character-Region Awareness For Text Detection & Deep Text Detection\n \
-    [https://gitee.com/tianyu__zhou/pyacl_samples/tree/a800/acl_craft_pt]")
-    return success_handle(json.dumps({"Mesagge" : "Hello! Welcome to Huawei Text Detector API."}))
+        print("PyTorch Deep Text Recognition\n \
+        [https://gitee.com/tianyu__zhou/pyacl_samples/tree/a800/acl_deep_text_recognition_pt]") # Text-Recog
 
-# Text-Recog homepage
-@app.route('/text-recog', methods = ['GET'])
-def recog_home_page():
-    print("PyTorch Deep Text Recognition\n \
-    [https://gitee.com/tianyu__zhou/pyacl_samples/tree/a800/acl_deep_text_recognition_pt]")
-    return success_handle(json.dumps({"Mesagge" : "Hello! Welcome to Huawei Text Recognizer API."}))
-    
+        return success_handle(json.dumps({"Mesagge" : "Hello! Welcome to Huawei OCR API."}))
+ 
 
 # get configiration
-@app.route('/get-cfg', methods = ['GET'])
-def get_cfg():
-    if request.method == 'GET':
+@app.route('/cfg', methods = ['GET', 'POST'])
+def cfg():
+    if request.method == 'GET': # get configiration
         cfg = app.cfg._sections['model']
 
         print("[RESULT] api configirations --> ", cfg)
         return success_handle(json.dumps({"status" : True, "configirations" : cfg}))
-
-# set configiration
-@app.route('/set-cfg', methods = ['POST'])
-def set_cfg():
-    if request.method == 'POST':
+    elif request.method == 'POST': # set configiration
         if 'chracters' not in request.form and \
             'cropped' not in request.form and \
             'text_thresh' not in request.form and \
@@ -139,11 +118,13 @@ def set_cfg():
             
             print("[INFO] configirations has been saved in the cfg file")
             return success_handle(json.dumps({"status" : True}))
+    else:
+        return error_handle(json.dumps({"status" : False, "failMesagge" : "invalid request method"}))
 
 
-# text detection
-@app.route('/CRAFT/analyze', methods = ['POST'])
-def detec():
+# run model
+@app.route('/analyze/<model_name>', methods = ['POST'])
+def run_model(model_name):
     if request.method == 'POST':
         if 'image' not in request.files:
             print("[ERROR] image required")
@@ -157,65 +138,41 @@ def detec():
                 print("[ERROR] file extension is not allowed")
                 return error_handle(json.dumps({"status" : False, "failMesagge" : "only files ends with *.png, *.jpg, *.jpeg can be upload."}))
             else:
-                # run CRAFT model
-                boxes_coord = run_craft(image)
+                # read the image in PIL format
+                print("[INFO] loading image . . .")
+                img = image.read()
+                # convert image format
+                img_rgb_plw = Image.open(BytesIO(img)).convert('RGB') 
 
-                return success_handle(json.dumps({"status" : True, "boxesCoordinate" : boxes_coord}))
+                if model_name == 'craft': # text detection
+                    # run CRAFT model
+                    boxes_coord = run_craft(img_rgb_plw)
+                    return success_handle(json.dumps({"status" : True, "boxesCoordinate" : boxes_coord}))
+                elif model_name == 'text-recog': # text recognation
+                    if 'bboxes' not in request.form:
+                        print("[ERROR] bboxes required")
+                        return error_handle(json.dumps({"status" : False, "failMesagge" : "bboxes required"}))
+                    else:
+                        print("%s"%(request.form['bboxes']))
+                        
+                        # read the boxes coordinate in list format
+                        print("[INFO] loading boxes coordinate . . .")
+                        boxes_coord = [json.loads('[%s]'%i) for i in request.form['bboxes'].strip('][').split('], [')]
 
-# text recognation
-@app.route('/text-recog/analyze', methods = ['POST']) # to do add boxes_coord for post
-def recog():
-    if request.method == 'POST':
-        if 'image' not in request.files:
-            print("[ERROR] image required")
-            return error_handle(json.dumps({"status" : False, "failMesagge" : "image required"}))
-        else:
-            print("%s"%(request.files['image']))
-            image = request.files['image']
+                        # run Text-Reco model
+                        texts = run_text_reco(img_rgb_plw, boxes_coord)
 
-            # check allowed file extension
-            if image.mimetype not in app.file_allowed:
-                print("[ERROR] file extension is not allowed . . .")
-                return error_handle(json.dumps({"status" : False, "failMesagge" : "only files ends with *.png, *.jpg, *.jpeg can be upload."}))
-            else:
-                if 'bboxes' not in request.form:
-                    print("[ERROR] bboxes required")
-                    return error_handle(json.dumps({"status" : False, "failMesagge" : "bboxes required"}))
-                else:
-                    print("%s"%(request.form['bboxes']))
-                    
-                    # read the boxes coordinate in list format
-                    print("[INFO] loading boxes coordinate . . .")
-                    boxes_coord = [json.loads('[%s]'%i) for i in request.form['bboxes'].strip('][').split('], [')]
+                        return success_handle(json.dumps({"status" : True, "imageTexts" : texts}))
+                elif model_name == 'ocr': # ocr
+                    # run CRAFT model
+                    boxes_coord = run_craft(img_rgb_plw)
 
                     # run Text-Reco model
-                    texts = run_text_reco(image, boxes_coord)
-
-                    return success_handle(json.dumps({"status" : True, "imageTexts" : texts}))
-
-# ocr
-@app.route('/ocr/analyze', methods = ['POST'])
-def ocr():
-    if request.method == 'POST':
-        if 'image' not in request.files:
-            print("[ERROR] image required")
-            return error_handle(json.dumps({"status" : False, "failMesagge" : "image required"}))
-        else:
-            print("%s"%(request.files['image']))
-            image = request.files['image']
-
-            # check allowed file extension
-            if image.mimetype not in app.file_allowed:
-                print("[ERROR] file extension is not allowed")
-                return error_handle(json.dumps({"status" : False, "failMesagge" : "only files ends with *.png, *.jpg, *.jpeg can be upload."}))
-            else:
-                # run CRAFT model
-                boxes_coord = run_craft(image)
-
-                # run Text-Reco model
-                texts = run_text_reco(image, boxes_coord)
+                    texts = run_text_reco(img_rgb_plw, boxes_coord)
                 
-                return success_handle(json.dumps({"status" : True, "imageTexts" : texts}))
+                    return success_handle(json.dumps({"status" : True, "imageTexts" : texts}))
+                else:
+                    return error_handle(json.dumps({"status" : False, "failMesagge" : "invalid model name"}))
 
 
 def parse_opt():
@@ -243,8 +200,8 @@ def init(opt):
                 "low_text" : app.cfg.getfloat('model', 'low_text')}
 
     # initialize models
-    # model = Model(opt.device_id, opt.detec_model, thresholds = thresholds)
-    # model2 = Model(opt.device_id, opt.recog_model, app.cfg.get('model', 'characters'))
+    app.detec_model = Model(opt.device_id, opt.detec_model, thresholds = thresholds)
+    app.recog_model = Model(opt.device_id, opt.recog_model, app.cfg.get('model', 'characters'))
 
 
 # run api 
