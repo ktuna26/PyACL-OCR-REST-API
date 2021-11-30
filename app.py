@@ -200,8 +200,8 @@ def init(opt):
                 "low_text" : app.cfg.getfloat('model', 'low_text')}
 
     # initialize models
-    app.detec_model = Model(opt.device_id, opt.detec_model, thresholds = thresholds)
-    app.recog_model = Model(opt.device_id, opt.recog_model, app.cfg.get('model', 'characters'))
+    app.detec_model = Model(opt.device_id, path.abspath(opt.detec_model), thresholds = thresholds)
+    app.recog_model = Model(opt.device_id, path.abspath(opt.recog_model), app.cfg.get('model', 'characters'))
 
 
 # run api 
