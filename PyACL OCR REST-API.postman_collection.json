@@ -11,7 +11,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://10.1.6.11:9685/",
+					"raw": "http://10.1.6.11:8500/",
 					"protocol": "http",
 					"host": [
 						"10",
@@ -19,7 +19,7 @@
 						"6",
 						"11"
 					],
-					"port": "9685",
+					"port": "8500",
 					"path": [
 						""
 					]
@@ -33,7 +33,7 @@
 				"method": "GET",
 				"header": [],
 				"url": {
-					"raw": "http://10.1.6.11:9685/cfg",
+					"raw": "http://10.1.6.11:8500/cfg",
 					"protocol": "http",
 					"host": [
 						"10",
@@ -41,39 +41,7 @@
 						"6",
 						"11"
 					],
-					"port": "9685",
-					"path": [
-						"cfg"
-					]
-				}
-			},
-			"response": []
-		},
-		{
-			"name": "SetCfg",
-			"request": {
-				"method": "POST",
-				"header": [],
-				"body": {
-					"mode": "urlencoded",
-					"urlencoded": [
-						{
-							"key": "cropped",
-							"value": "False",
-							"type": "text"
-						}
-					]
-				},
-				"url": {
-					"raw": "http://10.1.6.11:9685/cfg",
-					"protocol": "http",
-					"host": [
-						"10",
-						"1",
-						"6",
-						"11"
-					],
-					"port": "9685",
+					"port": "8500",
 					"path": [
 						"cfg"
 					]
@@ -92,12 +60,12 @@
 						{
 							"key": "image",
 							"type": "file",
-							"src": "/C:/Users/k84196832/Downloads/test_305.jpg"
+							"src": "/C:/Users/k84196832/Desktop/test2.jpg"
 						}
 					]
 				},
 				"url": {
-					"raw": "http://10.1.6.11:9685/analyze/ocr",
+					"raw": "http://10.1.6.11:8500/analyze/ocr",
 					"protocol": "http",
 					"host": [
 						"10",
@@ -105,7 +73,7 @@
 						"6",
 						"11"
 					],
-					"port": "9685",
+					"port": "8500",
 					"path": [
 						"analyze",
 						"ocr"
@@ -125,12 +93,12 @@
 						{
 							"key": "image",
 							"type": "file",
-							"src": "/C:/Users/k84196832/Downloads/test_305.jpg"
+							"src": "/C:/Users/k84196832/Desktop/test1.jpg"
 						}
 					]
 				},
 				"url": {
-					"raw": "http://10.1.6.11:9685/analyze/craft",
+					"raw": "http://10.1.6.11:8500/analyze/craft",
 					"protocol": "http",
 					"host": [
 						"10",
@@ -138,7 +106,7 @@
 						"6",
 						"11"
 					],
-					"port": "9685",
+					"port": "8500",
 					"path": [
 						"analyze",
 						"craft"
@@ -158,7 +126,7 @@
 						{
 							"key": "image",
 							"type": "file",
-							"src": "/C:/Users/k84196832/Downloads/test_305.jpg"
+							"src": "/C:/Users/k84196832/Desktop/test1.jpg"
 						},
 						{
 							"key": "bboxes",
@@ -168,7 +136,7 @@
 					]
 				},
 				"url": {
-					"raw": "http://10.1.6.11:9685/analyze/text-recog",
+					"raw": "http://10.1.6.11:8500/analyze/text-recog",
 					"protocol": "http",
 					"host": [
 						"10",
@@ -176,7 +144,7 @@
 						"6",
 						"11"
 					],
-					"port": "9685",
+					"port": "8500",
 					"path": [
 						"analyze",
 						"text-recog"

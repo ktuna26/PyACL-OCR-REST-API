@@ -25,15 +25,9 @@ class Model(object):
     
     def __init__(self,
                  device_id,
-                 model_path,
-                 characters = None,
-                 poly = True,
-                 thresholds = None):
+                 model_path):
         self.device_id = device_id
         self.model_path = model_path    # string
-        self.characters =  characters       # text_characters
-        self.thresholds = thresholds    # text_detect thresholds
-        self.poly = poly
         self.model_id = None            # pointer
         self.context  = None             # pointer
         self.stream  = None
@@ -124,16 +118,16 @@ class Model(object):
             print("model output datatype", acl.mdl.get_output_data_type(self.model_desc, i))
             self.model_output_height, self.model_output_width = acl.mdl.get_output_dims(self.model_desc, i)[0]['dims'][1:3]
         print("=" * 100)
-        
-        self.process = Process(self.poly, self.characters, self.thresholds)
-        print("[PROCESS] init process success")
-            
+
         print("[MODEL] class Model init resource stage success")
         print("=" * 100)
         
         
-    def run(self, img, boxes_coord = None, cropped = False ): # Overloaded function
-        if  not cropped and boxes_coord is None :
+    def run(self, img, cropped = False, poly = True, boxes_coord = None, characters = None,  thresholds = None ): # Overloaded function
+        process = Process(poly, characters, thresholds)
+        print("[PROCESS] init process success")
+        
+        if  not cropped and not boxes_coord :
             t0 = time.time()
             
             # resize
@@ -168,11 +162,11 @@ class Model(object):
             t1 = time.time()
 
             # Post-processing
-            bboxes, polys = self.process.getDetBoxes(score_text, score_link)
+            bboxes, polys = process.getDetBoxes(score_text, score_link)
 
             # coordinate adjustment
-            bboxes = self.process.adjustResultCoordinates(bboxes, ratio_w, ratio_h)
-            polys = self.process.adjustResultCoordinates(polys, ratio_w, ratio_h)
+            bboxes = process.adjustResultCoordinates(bboxes, ratio_w, ratio_h)
+            polys = process.adjustResultCoordinates(polys, ratio_w, ratio_h)
             for k in range(len(polys)):
                 if polys[k] is None: polys[k] = bboxes[k]
 
@@ -200,7 +194,7 @@ class Model(object):
                 for i, cropped_img in enumerate(cropped_imgs):
                     preds = self._preprocessing(cropped_img)
                 # Post-processing
-                    self.process.text_boxes(preds, bboxes_sorted, i)    # recognize corresponding text for each text box
+                    process.text_boxes(preds, bboxes_sorted, i)    # recognize corresponding text for each text box
             
             else:
                 bboxes = []
@@ -209,7 +203,7 @@ class Model(object):
                 preds = self._preprocessing(img)
                 
                 # Post-processing
-                self.process.text_boxes(preds, bboxes_sorted, 0)    # recognize corresponding text
+                process.text_boxes(preds, bboxes_sorted, 0)    # recognize corresponding text
                 
             print("[INFO] recognition done!")
 
@@ -217,7 +211,7 @@ class Model(object):
                 return len(bboxes_sorted)
 
             # concatenate text boxes that mistakenly detected as two words but actually is one word
-            bboxes_sorted = self.process.get_concat_same() 
+            bboxes_sorted = process.get_concat_same() 
 
             t0 = time.time() - t0
             print("[RESULT] image runtime : {:.3f}".format(t0))
