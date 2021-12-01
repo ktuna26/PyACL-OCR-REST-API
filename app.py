@@ -26,7 +26,7 @@ from cv2 import imread, cvtColor, COLOR_BGR2RGB, COLOR_RGB2BGR, imwrite
 from os import path, getcwd
 from configparser import ConfigParser
 from flask import Flask, json, Response, request
-from flask_restplus import Api, Resource, reqparse
+from flask_restplus import Api, Resource, reqparse, fields
 
 
 # initialize the app
@@ -115,15 +115,18 @@ class ConfigurationService(Resource):
                 return success_handle(json.dumps({"status" : True}))
 
 
-file_upload = reqparse.RequestParser()
-file_upload.add_argument('image',  
+model_service_param_parser = reqparse.RequestParser()
+model_service_param_parser.add_argument('image',  
                          type=werkzeug.datastructures.FileStorage, 
                          location='files', 
                          required=True, 
                          help='Image file')
+model_service_param_parser.add_argument('link_thresh', type=int, help='Some param', location='form')
+model_service_param_parser.add_argument('model_name', type=str, help='ocr, craft or text-recog', choices=('ocr', 'craft', 'text-recog'), location='path', required=True)
+
 # run model
 @name_space.route('/analyze/<model_name>', methods = ['POST'])
-@name_space.expect(file_upload)
+@name_space.expect(model_service_param_parser)
 @resutfulApp.doc(responses={
         200: 'Success',
         400: 'Validation Error'
@@ -131,9 +134,18 @@ file_upload.add_argument('image',
         <h1>CRAFT: Character-Region Awareness For Text detection & Deep Text Recognition</h1><h2>CRAFT</h2><p>CRAFT text detector that effectively detect text area by exploring each character region and affinity between characters. The bounding box of texts are obtained by simply finding minimum bounding rectangles on binary map after thresholding character region and affinity scores.<br>
         <img alt="yeah, just like that" src="./static/craft_example.gif">
         </p><h2>Deep Text Recognition</h2><p>Two-stage Scene Text Recognition (STR), that most existing STR models fit into.<br>
-        <img alt="fck yeah" src="./static/deep_text_reco.jpg"></p><h2>Input</h2><p>Supported image types are <b>PNG, JPG and JPEG</b>. Minimum resoulution must be greater than <b>300x300</b></p><h2>Returns</h2><p>Beautiful text that are recognized from image. There is no support for Chinese, Japanese, Arabic (only Latin, bitch).
+        <img alt="hit me one more time" src="./static/deep_text_reco.jpg"></p><h2>Input</h2><p>Supported image types are <b>PNG, JPG and JPEG</b>. Image and model name must be defined.<ul>
+        <li>Minimum resoulution must be greater than <b>300x300</b></li>
+        <li>Model Name must be one of craft, text-recog or ocr</li>
+        <li>link_thresh must be in between 0.1~1.0</li>
+        <li>low_text must be in between 0.1~1.0</li>
+        <li>text_thresh must be in between 0.1~1.0</li>
+        </ul></p><h2>Returns</h2><p>Recognized text in this charset: 
+        <b>0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ</b>
+        There is no support for Chinese, Japanese, Arabic (only English).
         </p>
-    ''', params={'model_name': 'ocr, craft or text-recog'})
+    '''
+    )
 class ModelService(Resource):
     def post(self, model_name):
         # check image is uploaded with image keyword
