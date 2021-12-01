@@ -187,17 +187,20 @@ class ModelService(Resource):
 
                         # run Text-Reco model
                         texts = run_text_reco(img_rgb_plw, boxes_coord)
-
                         return success_handle(json.dumps({"status" : True, "imageTexts" : texts}))
                 elif model_name == 'ocr': # ocr
                     # run CRAFT model
                     boxes_coord = run_craft(img_rgb_plw)
 
-                    # run Text-Reco model
-                    texts = run_text_reco(img_rgb_plw, boxes_coord)
-                
-                    return success_handle(json.dumps({"status" : True, "imageTexts" : texts}))
+                    if not len(boxes_coord):
+                        print("[ERROR] no text detected")
+                        return error_handle(json.dumps({"status" : False, "failMesagge" : "no text detected"}))
+                    else:
+                        # run Text-Reco model
+                        texts = run_text_reco(img_rgb_plw, boxes_coord)
+                        return success_handle(json.dumps({"status" : True, "imageTexts" : texts}))
                 else:
+                    print("[ERROR] invalid model name")
                     return error_handle(json.dumps({"status" : False, "failMesagge" : "invalid model name"}))
 
 
