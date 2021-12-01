@@ -87,22 +87,6 @@ def run_text_reco(image, boxes_coord):
     print("[RESULT] image texts --> ", texts)
     return texts
 
-
-# home page
-# @name_space.route('/', methods = ['GET'])
-# def home_page():
-    # if request.method == 'GET': 
-        # print("This is a simple OCR API [Copyright 2021 Huawei Technologies Co., Ltd]") # OCR
-        
-        # print("CRAFT : Character-Region Awareness For Text Detection & Deep Text Detection\n \
-        # [https://gitee.com/tianyu__zhou/pyacl_samples/tree/a800/acl_craft_pt]") # CRAFT
-
-        # print("PyTorch Deep Text Recognition\n \
-        # [https://gitee.com/tianyu__zhou/pyacl_samples/tree/a800/acl_deep_text_recognition_pt]") # Text-Recog
-
-        # return success_handle(json.dumps({"Mesagge" : "Hello! Welcome to Huawei OCR API."}))
- 
-
 # get configiration
 @name_space.route('/cfg', methods = ['GET', 'POST'])
 class ConfigurationService(Resource):
@@ -118,7 +102,7 @@ class ConfigurationService(Resource):
                 'link_thresh' not in request.form and \
                 'low_text' not in request.form:
                 print("[ERROR] at least one of the 'chracters', 'cropped', 'text_thresh', 'link_thresh' and 'low_text' elements required")
-                return error_handle(json.dumps({"status" : False, "failMesagge" : "at least one of the 'chracters', \
+                return error_handle(json.dumps({"errorMessage" : "at least one of the 'chracters', \
                                     'cropped', 'text-thresh', 'link-thresh' and 'low-tex' elements required."}))
             else :
                 print(request.form)
@@ -145,63 +129,81 @@ file_upload.add_argument('image',
         400: 'Validation Error'
     },description='''
         <h1>CRAFT: Character-Region Awareness For Text detection & Deep Text Recognition</h1><h2>CRAFT</h2><p>CRAFT text detector that effectively detect text area by exploring each character region and affinity between characters. The bounding box of texts are obtained by simply finding minimum bounding rectangles on binary map after thresholding character region and affinity scores.<br>
-        <img alt="fck yeah" src="./static/craft_example.gif">
+        <img alt="yeah, just like that" src="./static/craft_example.gif">
         </p><h2>Deep Text Recognition</h2><p>Two-stage Scene Text Recognition (STR), that most existing STR models fit into.<br>
-        <img alt="fck yeah" src="./static/deep_text_reco.jpg"></p><h2>Input</h2><p>Supported image types are <b>PNG, JPG, JPEG and GIF</b>. Minimum resoulution must be greater than <b>800x600</b></p><h2>Returns</h2><p>Beautiful text that are recognized from image. There is no support for Chinese, Japanese, Arabic (only Latin, bitch).
+        <img alt="fck yeah" src="./static/deep_text_reco.jpg"></p><h2>Input</h2><p>Supported image types are <b>PNG, JPG and JPEG</b>. Minimum resoulution must be greater than <b>300x300</b></p><h2>Returns</h2><p>Beautiful text that are recognized from image. There is no support for Chinese, Japanese, Arabic (only Latin, bitch).
         </p>
     ''', params={'model_name': 'ocr, craft or text-recog'})
 class ModelService(Resource):
     def post(self, model_name):
+        # check image is uploaded with image keyword
         if 'image' not in request.files:
             print("[ERROR] image required")
-            return error_handle(json.dumps({"status" : False, "failMesagge" : "image required"}))
-        else:
-            print("%s"%(request.files['image']))
-            image = request.files['image']
+            return error_handle(json.dumps({"errorMessage" : "image required"}), 400)
+        
+        print("%s"%(request.files['image']))
+        image = request.files['image']
+        
+        # chech extension of image
+        filename = image.filename
+        if '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() not in app.cfg.get('model', 'supported_extensions'):
+            return error_handle(json.dumps({"errorMessage" : "image format must be one of " + app.cfg.get('model', 'supported_extensions')}), status=400)
 
-            # check allowed file extension
-            if image.mimetype not in app.file_allowed:
-                print("[ERROR] file extension is not allowed")
-                return error_handle(json.dumps({"status" : False, "failMesagge" : "only files ends with *.png, *.jpg, *.jpeg can be upload."}))
+        # check mimetype
+        if image.mimetype not in app.file_allowed:
+            print("[ERROR] file extension is not allowed")
+            return error_handle(json.dumps({"errorMessage" : "only files ends with *.png, *.jpg, *.jpeg can be upload."}), 400)
+        
+        # read the image in PIL format
+        print("[INFO] loading image . . .")
+        img = image.read()
+        # convert image format
+        try:
+            im = Image.open(BytesIO(img))
+        except:
+            return error_handle(json.dumps({"errorMessage" : "Uploaded file is not a valid image"}), status=400)
+        
+        # check min resolution
+        width, height = im.size
+        if width < 300 or height <300 :
+            return error_handle(json.dumps({"errorMessage" : "Image resolution must be greater than 300x300"}), status=400)
+        
+        img_rgb_plw = im.convert('RGB') 
+
+        if model_name == 'craft': # text detection
+            # run CRAFT model
+            boxes_coord = run_craft(img_rgb_plw)
+            return success_handle(json.dumps({"boxesCoordinate" : boxes_coord}))
+        elif model_name == 'text-recog': # text recognation
+            if 'bboxes' not in request.form:
+                print("[ERROR] bboxes required")
+                return error_handle(json.dumps({"errorMessage" : "bboxes required"}))
             else:
-                # read the image in PIL format
-                print("[INFO] loading image . . .")
-                img = image.read()
-                # convert image format
-                img_rgb_plw = Image.open(BytesIO(img)).convert('RGB') 
+                print("%s"%(request.form['bboxes']))
+                
+                # read the boxes coordinate in list format
+                print("[INFO] loading boxes coordinate . . .")
+                boxes_coord = [json.loads('[%s]'%i) for i in request.form['bboxes'].strip('][').split('], [')]
 
-                if model_name == 'craft': # text detection
-                    # run CRAFT model
-                    boxes_coord = run_craft(img_rgb_plw)
-                    return success_handle(json.dumps({"status" : True, "boxesCoordinate" : boxes_coord}))
-                elif model_name == 'text-recog': # text recognation
-                    if 'bboxes' not in request.form:
-                        print("[ERROR] bboxes required")
-                        return error_handle(json.dumps({"status" : False, "failMesagge" : "bboxes required"}))
-                    else:
-                        print("%s"%(request.form['bboxes']))
-                        
-                        # read the boxes coordinate in list format
-                        print("[INFO] loading boxes coordinate . . .")
-                        boxes_coord = [json.loads('[%s]'%i) for i in request.form['bboxes'].strip('][').split('], [')]
+                # run Text-Reco model
+                texts = run_text_reco(img_rgb_plw, boxes_coord)
+                return success_handle(json.dumps({"imageTexts" : texts}))
+        elif model_name == 'ocr': # ocr
+            # run CRAFT model
+            boxes_coord = run_craft(img_rgb_plw)
 
-                        # run Text-Reco model
-                        texts = run_text_reco(img_rgb_plw, boxes_coord)
-                        return success_handle(json.dumps({"status" : True, "imageTexts" : texts}))
-                elif model_name == 'ocr': # ocr
-                    # run CRAFT model
-                    boxes_coord = run_craft(img_rgb_plw)
+            if not len(boxes_coord):
+                print("[ERROR] no text detected")
+                return error_handle(json.dumps({"errorMessage" : "no text detected"}), status=500)
+            else:
+                # run Text-Reco model
+                texts = run_text_reco(img_rgb_plw, boxes_coord)
+                return success_handle(json.dumps({"imageTexts" : texts}))
+        else:
+            print("[ERROR] invalid model name")
+            return error_handle(json.dumps({"errorMessage" : "invalid model name, model names must be one of craft, text-recog or ocr"}), status=400)
 
-                    if not len(boxes_coord):
-                        print("[ERROR] no text detected")
-                        return error_handle(json.dumps({"status" : False, "failMesagge" : "no text detected"}))
-                    else:
-                        # run Text-Reco model
-                        texts = run_text_reco(img_rgb_plw, boxes_coord)
-                        return success_handle(json.dumps({"status" : True, "imageTexts" : texts}))
-                else:
-                    print("[ERROR] invalid model name")
-                    return error_handle(json.dumps({"status" : False, "failMesagge" : "invalid model name"}))
 
 
 def parse_opt():
