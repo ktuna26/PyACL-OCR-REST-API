@@ -173,13 +173,13 @@ class ModelService(Resource):
 
         if model_name == 'craft': # text detection
             if 'cropped' in request.form:
-                cropped = request.form.getboolean('cropped')
+                cropped = request.form('cropped', type=bool)
             if 'text_thresh' in request.form:
-                text_thresh = request.form.getfloat('text_thresh')
+                text_thresh = request.form.getf('text_thresh', type=float)
             if 'link_thresh' in request.form:
-                link_thresh = request.form.getfloat('link_thresh')
+                link_thresh = request.form.get('link_thresh', type=float)
             if 'low_text' not in request.form:
-                low_text = request.form.getfloat('low_text')
+                low_text = request.form.get('low_text', type=float)
             
             print("[INFO] cropped : %s, text_thresh : %s, link_thresh : %s, low_text%s"%(cropped, text_thresh, 
                                                                                         link_thresh, low_text))
@@ -195,7 +195,7 @@ class ModelService(Resource):
             else:
                 bboxes = request.form['bboxes']
                 if 'cropped' in request.form:
-                    cropped = request.form.getboolean('cropped')
+                    cropped = request.form('cropped', type=bool)
 
                 print("[INFO] cropped : %s, bboxes : %s"%(cropped, bboxes))
                 
@@ -209,13 +209,13 @@ class ModelService(Resource):
 
         elif model_name == 'ocr': # ocr
             if 'cropped' in request.form:
-                cropped = request.form.getboolean('cropped')
+                cropped = request.form.get('cropped', type=bool)
             if 'text_thresh' in request.form:
-                text_thresh = request.form.getfloat('text_thresh')
+                text_thresh = request.form.get('text_thresh', type=float)
             if 'link_thresh' in request.form:
-                link_thresh = request.form.getfloat('link_thresh')
+                link_thresh = request.form.get('link_thresh', type=float)
             if 'low_text' not in request.form:
-                low_text = request.form.getfloat('low_text')
+                low_text = request.form.get('low_text', type=float)
             
             print("[INFO] cropped : %s, text_thresh : %s, link_thresh : %s, low_text%s"%(cropped, text_thresh, 
                                                                                         link_thresh, low_text))
