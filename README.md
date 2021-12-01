@@ -9,9 +9,11 @@ This is asimple python optical character recognition server. It's model consists
 Install dependencies;
 - numpy
 - Pillow
-- opencv-python >= 3.4.2
+- opencv-python  >= 3.4.2
 - scikit-image
-- flask
+- werkzeug
+- flask-restplus==0.12.1
+- flask==1.0.3
 
 ```
 pip install -r requirements.txt
@@ -21,11 +23,7 @@ pip install -r requirements.txt
 Open the terminal on the project path and then run the following command.
 
 ```bash
-python3 app.py --host=0.0.0.0 \
-                --port=9687 \
-                --detec-model=weights/craft.om \
-                --recog-model=weights/None-ResNet-None-CTC.om --device-id=0 \
-                --cfg=data/app.cfg
+python3 app.py --cfg=data/app.cfg
 ```
 
 **Note :** Import `PyACL OCR REST-API.postman_collection.json` file to `postman` collections for easy demo

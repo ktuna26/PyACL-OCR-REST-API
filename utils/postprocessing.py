@@ -14,15 +14,17 @@ from data.constant import BLANK
 
 class Process:
     
-    def __init__(self, poly, characters, thresholds):        
+    def __init__(self, poly, characters, text_thresh, link_thresh, low_text):        
         self.poly = poly
         self.charters = characters
-        self.thresholds = thresholds
+        self.text_thresh = text_thresh
+        self.link_thresh = link_thresh
+        self.low_text = low_text
         
     
     def getDetBoxes(self, textmap, linkmap):
-        boxes, labels, mapper = getDetBoxes_core(textmap, linkmap, self.thresholds['low_text'], 
-                                                 self.thresholds['link_thresh'], self.thresholds['text_thresh'])
+        boxes, labels, mapper = getDetBoxes_core(textmap, linkmap, self.text_thresh,
+                                                                             self.link_thresh, self.low_text)
         
         if self.poly:
             polys = getPoly_core(boxes, labels, mapper, linkmap)
@@ -84,7 +86,7 @@ def warpCoord(Minv, pt):
 """ end of auxilary functions """
 
 
-def getDetBoxes_core(textmap, linkmap, low_text, link_thres, text_thresh):
+def getDetBoxes_core(textmap, linkmap, text_thresh, link_thresh, low_text):
     # prepare data
     linkmap = linkmap.copy()
     textmap = textmap.copy()
@@ -92,7 +94,7 @@ def getDetBoxes_core(textmap, linkmap, low_text, link_thres, text_thresh):
 
     """ labeling method """
     ret, text_score = cv2.threshold(textmap, low_text, 1, 0)
-    ret, link_score = cv2.threshold(linkmap, link_thres, 1, 0)
+    ret, link_score = cv2.threshold(linkmap, link_thresh, 1, 0)
 
     text_score_comb = np.clip(text_score + link_score, 0, 1)
     nLabels, labels, stats, centroids = cv2.connectedComponentsWithStats(text_score_comb.astype(np.uint8), connectivity=4)

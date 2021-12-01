@@ -44,7 +44,7 @@ def success_handle(output, status=200, mimetype='application/json'):
 
 
 # run CRAFT model
-def run_craft(image, cropped, thresholds):
+def run_craft(image, cropped, text_thresh, link_thresh, low_text):
     print("[INFO] running CRAFT model . . .")
 
     # convert image format
@@ -52,7 +52,8 @@ def run_craft(image, cropped, thresholds):
 
     # run model
     print("[INFO] type of the detec_model" + str(type(app.detec_model)))
-    bboxes, polys = app.detec_model.run(img_rgb, cropped = cropped, thresholds = thresholds)
+    bboxes, polys = app.detec_model.run(img_rgb, cropped = cropped, text_thresh = text_thresh, 
+                                        link_thresh = link_thresh, low_text = low_text)
 
     # get boxes coordinate
     boxes_coord = []
@@ -64,14 +65,14 @@ def run_craft(image, cropped, thresholds):
     return boxes_coord
 
 # run Text-Reco model
-def run_text_reco(image, cropped, boxes_coord, characters):
+def run_text_reco(image, cropped, boxes_coord):
     print("[INFO] running Text-Recognition model . . .")
 
     # convert image format
     img_bgr = cvtColor(np.array(image), COLOR_RGB2BGR)
 
     # run Text-Reco model
-    bboxes = app.recog_model.run(img_bgr, cropped = cropped, boxes_coord = boxes_coord, characters = characters)
+    bboxes = app.recog_model.run(img_bgr, cropped = cropped, boxes_coord = boxes_coord)
 
     # get text
     texts = ""
@@ -103,7 +104,8 @@ model_service_param_parser.add_argument('image',
                          location='files', 
                          required=True, 
                          help='Image file')
-model_service_param_parser.add_argument('model_name', type=str, help='ocr, craft or text-recog', choices=('ocr', 'craft', 'text-recog'), location='path', required=True)
+model_service_param_parser.add_argument('model_name', type=str, help='ocr, craft or text-recog', 
+                                        choices=('ocr', 'craft', 'text-recog'), location='path', required=True)
 model_service_param_parser.add_argument('link_thresh', type=int, help='Some param', location='form')
 model_service_param_parser.add_argument('low_text', type=int, help='Some param', location='form')
 model_service_param_parser.add_argument('text_thresh', type=int, help='Some param', location='form')
@@ -161,96 +163,77 @@ class ModelService(Resource):
         if width < 300 or height <300 :
             return error_handle(json.dumps({"errorMessage" : "Image resolution must be greater than 300x300"}), status=400)
         
-        img_rgb_plw = img.convert('RGB') 
+        img_rgb_plw = img.convert('RGB')
+
+        # default parameters for modal
+        cropped = False
+        text_thresh = 0.7
+        link_thresh = 0.4
+        low_text = 0.4
 
         if model_name == 'craft': # text detection
-            if 'cropped' not in request.form:
-                print("[ERROR] cropped prameter required")
-                return error_handle(json.dumps({"errorMessage" : "cropped parameter required"}), status=400)
-            elif 'text_thresh' not in request.form:
-                print("[ERROR] text_thresh parameter required")
-                return error_handle(json.dumps({"errorMessage" : "text_thresh parameter required"}), status=400)
-            elif 'link_thresh' not in request.form:
-                print("[ERROR] link_thresh parameter required")
-                return error_handle(json.dumps({"errorMessage" : "link_thresh parameter required"}), status=400)
-            elif 'low_text' not in request.form:
-                print("[ERROR] low_text parameter required")
-                return error_handle(json.dumps({"errorMessage" : "low_text parameter required"}), status=400)
-            else:
+            if 'cropped' in request.form:
                 cropped = request.form.getboolean('cropped')
-                thresholds = {"text_thresh" : request.getfloat('text_thresh'), 
-                            "link_thresh" : request.getfloat('link_thresh'), 
-                            "low_text" : request.getfloat('low_text')}
+            if 'text_thresh' in request.form:
+                text_thresh = request.form.getfloat('text_thresh')
+            if 'link_thresh' in request.form:
+                link_thresh = request.form.getfloat('link_thresh')
+            if 'low_text' not in request.form:
+                low_text = request.form.getfloat('low_text')
+            
+            print("[INFO] cropped : %s, text_thresh : %s, link_thresh : %s, low_text%s"%(cropped, text_thresh, 
+                                                                                        link_thresh, low_text))
 
-                print(cropped + "\n" + thresholds)
-
-                # run CRAFT model
-                boxes_coord = run_craft(img_rgb_plw, cropped, thresholds)
-                return success_handle(json.dumps({"boxesCoordinate" : boxes_coord}))
+            # run CRAFT model
+            boxes_coord = run_craft(img_rgb_plw, cropped, text_thresh, link_thresh, low_text)
+            return success_handle(json.dumps({"boxesCoordinate" : boxes_coord}))
 
         elif model_name == 'text-recog': # text recognation
-            if 'cropped' not in request.form:
-                print("[ERROR] cropped prameter required")
-                return error_handle(json.dumps({"errorMessage" : "cropped prameter required"}), status=400)
-            elif 'bboxes' not in request.form:
+            if 'bboxes' not in request.form:
                 print("[ERROR] bboxes required")
                 return error_handle(json.dumps({"errorMessage" : "bboxes required"}), status=400)
-            elif 'characters' not in request.form:
-                print("[ERROR] characters required")
-                return error_handle(json.dumps({"errorMessage" : "characters required"}), status=400)
             else:
-                cropped = request.form.getboolean('cropped')
                 bboxes = request.form['bboxes']
-                characters = request.form['characters']
+                if 'cropped' in request.form:
+                    cropped = request.form.getboolean('cropped')
 
-                print(cropped + "\n" + bboxes + "\n" + characters)
+                print("[INFO] cropped : %s, bboxes : %s"%(cropped, bboxes))
                 
                 # read the boxes coordinate in list format
                 print("[INFO] loading boxes coordinate . . .")
-                boxes_coord = [json.loads('[%s]'%i) for i in request.form['bboxes'].strip('][').split('], [')]
+                boxes_coord = [json.loads('[%s]'%i) for i in bboxes.strip('][').split('], [')]
 
                 # run Text-Reco model
-                texts = run_text_reco(img_rgb_plw, boxes_coord, characters)
+                texts = run_text_reco(img_rgb_plw, cropped, boxes_coord)
                 return success_handle(json.dumps({"imageTexts" : texts}))
 
         elif model_name == 'ocr': # ocr
-            if 'cropped' not in request.form:
-                print("[ERROR] cropped prameter required")
-                return error_handle(json.dumps({"errorMessage" : "cropped parameter required"}), status=400)
-            elif 'text_thresh' not in request.form:
-                print("[ERROR] text_thresh parameter required")
-                return error_handle(json.dumps({"errorMessage" : "text_thresh parameter required"}), status=400)
-            elif 'link_thresh' not in request.form:
-                print("[ERROR] link_thresh parameter required")
-                return error_handle(json.dumps({"errorMessage" : "link_thresh parameter required"}), status=400)
-            elif 'low_text' not in request.form:
-                print("[ERROR] low_text parameter required")
-                return error_handle(json.dumps({"errorMessage" : "low_text parameter required"}), status=400)
-            elif 'characters' not in request.form:
-                print("[ERROR] characters required")
-                return error_handle(json.dumps({"errorMessage" : "characters required"}), status=400)
-            else:
+            if 'cropped' in request.form:
                 cropped = request.form.getboolean('cropped')
-                characters = request.form['characters']
-                thresholds = {"text_thresh" : request.getfloat('text_thresh'), 
-                            "link_thresh" : request.getfloat('link_thresh'), 
-                            "low_text" : request.getfloat('low_text')}
-                
-                print(cropped + "\n" + thresholds + "\n" + "\n" + characters)
+            if 'text_thresh' in request.form:
+                text_thresh = request.form.getfloat('text_thresh')
+            if 'link_thresh' in request.form:
+                link_thresh = request.form.getfloat('link_thresh')
+            if 'low_text' not in request.form:
+                low_text = request.form.getfloat('low_text')
+            
+            print("[INFO] cropped : %s, text_thresh : %s, link_thresh : %s, low_text%s"%(cropped, text_thresh, 
+                                                                                        link_thresh, low_text))
 
-                # run CRAFT model
-                boxes_coord = run_craft(img_rgb_plw, cropped, thresholds)
+            # run CRAFT model
+            boxes_coord = run_craft(img_rgb_plw, cropped, text_thresh, link_thresh, low_text)
 
-                if not len(boxes_coord):
-                    print("[ERROR] no text detected")
-                    return error_handle(json.dumps({"errorMessage" : "no text detected"}), status=500)
-                else:
-                    # run Text-Reco model
-                    texts = run_text_reco(img_rgb_plw, boxes_coord, characters)
-                    return success_handle(json.dumps({"imageTexts" : texts}))
+            if not len(boxes_coord):
+                print("[ERROR] no text detected")
+                return error_handle(json.dumps({"errorMessage" : "no text detected"}), status=500)
+            else:
+                # run Text-Reco model
+                texts = run_text_reco(img_rgb_plw, cropped, boxes_coord)
+                return success_handle(json.dumps({"imageTexts" : texts}))
         else:
             print("[ERROR] invalid model name")
-            return error_handle(json.dumps({"errorMessage" : "invalid model name, model names must be one of craft, text-recog or ocr"}), status=400)
+            return error_handle(json.dumps({"errorMessage" : \
+                                            "invalid model name, model names must be one of craft, text-recog or ocr"}), status=400)
 
 
 def parse_opt():
@@ -273,7 +256,8 @@ def init(opt):
     # initialize models
     app.detec_model = Model(app.cfg.getint('npu', 'device_id'), path.abspath(app.cfg.get('model', 'detec_path')))
     print("[INFO] type of the detec_model ", str(type(app.detec_model)))
-    app.recog_model = Model(app.cfg.getint('npu', 'device_id'), path.abspath(app.cfg.get('model', 'recog_path')))
+    app.recog_model = Model(app.cfg.getint('npu', 'device_id'), path.abspath(app.cfg.get('model', 'recog_path')), 
+                            app.cfg.get('model', 'characters'))
     print("[INFO] type of the recog_model ", str(type(app.recog_model)))
 
 

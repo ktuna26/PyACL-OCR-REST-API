@@ -25,9 +25,11 @@ class Model(object):
     
     def __init__(self,
                  device_id,
-                 model_path):
+                 model_path,
+                 characters = None):
         self.device_id = device_id
         self.model_path = model_path    # string
+        self.characters = characters    # text characters
         self.model_id = None            # pointer
         self.context  = None             # pointer
         self.stream  = None
@@ -123,8 +125,8 @@ class Model(object):
         print("=" * 100)
         
         
-    def run(self, img, cropped = False, poly = True, boxes_coord = None, characters = None,  thresholds = None ): # Overloaded function
-        process = Process(poly, characters, thresholds)
+    def run(self, img, cropped = False, poly = True, text_thresh = 0.7, link_thresh = 0.4, low_text = 0.4, boxes_coord = None): # Overloaded function
+        process = Process(poly, self.characters, text_thresh, link_thresh, low_text)
         print("[PROCESS] init process success")
         
         if  not cropped and not boxes_coord :
