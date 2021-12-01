@@ -16,6 +16,8 @@ MODIFIED: 2021-11-27 16:48:45
 # -*- coding:utf-8 -*-
 import argparse
 import numpy as np
+import werkzeug
+werkzeug.cached_property = werkzeug.utils.cached_property
 
 from PIL import Image
 from io import BytesIO
@@ -24,11 +26,16 @@ from cv2 import imread, cvtColor, COLOR_BGR2RGB, COLOR_RGB2BGR, imwrite
 from os import path, getcwd
 from configparser import ConfigParser
 from flask import Flask, json, Response, request
+from flask_restplus import Api, Resource, reqparse
 
 
 # initialize the app
 app = Flask(__name__)
-
+resutfulApp = Api(app = app, 
+		  version = "1.0", 
+		  title = "OCR", 
+		  description = "Text detection and recognition from image")
+name_space = resutfulApp.namespace('ocr', description='Craft APIs')
 
 # return the succes message with api
 def error_handle(output, code=1, status=500, mimetype='application/json'):
@@ -47,6 +54,7 @@ def run_craft(image):
     img_rgb = np.array(image)
 
     # run model
+    print("type of the detec_model" + str(type(app.detec_model)))
     bboxes, polys = app.detec_model.run(img_rgb)
 
     # get boxes coordinate
@@ -70,62 +78,80 @@ def run_text_reco(image, boxes_coord):
 
     # get text
     texts = ""
-    for b in bboxes:
-        texts+=b.get_text() + " "
+    try:
+        for b in bboxes:
+            texts+=b.get_text() + " "
+    except TypeError:
+        texts+=""
 
     print("[RESULT] image texts --> ", texts)
     return texts
 
 
 # home page
-@app.route('/', methods = ['GET'])
-def home_page():
-    if request.method == 'GET': 
-        print("This is a simple OCR API [Copyright 2021 Huawei Technologies Co., Ltd]") # OCR
+# @name_space.route('/', methods = ['GET'])
+# def home_page():
+    # if request.method == 'GET': 
+        # print("This is a simple OCR API [Copyright 2021 Huawei Technologies Co., Ltd]") # OCR
         
-        print("CRAFT : Character-Region Awareness For Text Detection & Deep Text Detection\n \
-        [https://gitee.com/tianyu__zhou/pyacl_samples/tree/a800/acl_craft_pt]") # CRAFT
+        # print("CRAFT : Character-Region Awareness For Text Detection & Deep Text Detection\n \
+        # [https://gitee.com/tianyu__zhou/pyacl_samples/tree/a800/acl_craft_pt]") # CRAFT
 
-        print("PyTorch Deep Text Recognition\n \
-        [https://gitee.com/tianyu__zhou/pyacl_samples/tree/a800/acl_deep_text_recognition_pt]") # Text-Recog
+        # print("PyTorch Deep Text Recognition\n \
+        # [https://gitee.com/tianyu__zhou/pyacl_samples/tree/a800/acl_deep_text_recognition_pt]") # Text-Recog
 
-        return success_handle(json.dumps({"Mesagge" : "Hello! Welcome to Huawei OCR API."}))
+        # return success_handle(json.dumps({"Mesagge" : "Hello! Welcome to Huawei OCR API."}))
  
 
 # get configiration
-@app.route('/cfg', methods = ['GET', 'POST'])
-def cfg():
-    if request.method == 'GET': # get configiration
-        cfg = app.cfg._sections['model']
+@name_space.route('/cfg', methods = ['GET', 'POST'])
+class ConfigurationService(Resource):
+    def get(self):
+            cfg = app.cfg._sections['model']
 
-        print("[RESULT] api configirations --> ", cfg)
-        return success_handle(json.dumps({"status" : True, "configirations" : cfg}))
-    elif request.method == 'POST': # set configiration
-        if 'chracters' not in request.form and \
-            'cropped' not in request.form and \
-            'text_thresh' not in request.form and \
-            'link_thresh' not in request.form and \
-            'low_text' not in request.form:
-            print("[ERROR] at least one of the 'chracters', 'cropped', 'text_thresh', 'link_thresh' and 'low_text' elements required")
-            return error_handle(json.dumps({"status" : False, "failMesagge" : "at least one of the 'chracters', \
-                                'cropped', 'text-thresh', 'link-thresh' and 'low-tex' elements required."}))
-        else :
-            print(request.form)
+            print("[RESULT] api configirations --> ", cfg)
+            return success_handle(json.dumps({"status" : True, "configirations" : cfg}))
+    def post(self):
+            if 'chracters' not in request.form and \
+                'cropped' not in request.form and \
+                'text_thresh' not in request.form and \
+                'link_thresh' not in request.form and \
+                'low_text' not in request.form:
+                print("[ERROR] at least one of the 'chracters', 'cropped', 'text_thresh', 'link_thresh' and 'low_text' elements required")
+                return error_handle(json.dumps({"status" : False, "failMesagge" : "at least one of the 'chracters', \
+                                    'cropped', 'text-thresh', 'link-thresh' and 'low-tex' elements required."}))
+            else :
+                print(request.form)
 
-            for name in request.form:
-                # get name from the form 
-                app.cfg['model'][name] = request.form.get(name) # to do -> add a patern for charecter seting !
-            
-            print("[INFO] configirations has been saved in the cfg file")
-            return success_handle(json.dumps({"status" : True}))
-    else:
-        return error_handle(json.dumps({"status" : False, "failMesagge" : "invalid request method"}))
+                for name in request.form:
+                    # get name from the form 
+                    app.cfg['model'][name] = request.form.get(name) # to do -> add a patern for charecter seting !
+                
+                print("[INFO] configirations has been saved in the cfg file")
+                return success_handle(json.dumps({"status" : True}))
 
 
+file_upload = reqparse.RequestParser()
+file_upload.add_argument('image',  
+                         type=werkzeug.datastructures.FileStorage, 
+                         location='files', 
+                         required=True, 
+                         help='Image file')
 # run model
-@app.route('/analyze/<model_name>', methods = ['POST'])
-def run_model(model_name):
-    if request.method == 'POST':
+@name_space.route('/analyze/<model_name>', methods = ['POST'])
+@name_space.expect(file_upload)
+@resutfulApp.doc(responses={
+        200: 'Success',
+        400: 'Validation Error'
+    },description='''
+        <h1>CRAFT: Character-Region Awareness For Text detection & Deep Text Recognition</h1><h2>CRAFT</h2><p>CRAFT text detector that effectively detect text area by exploring each character region and affinity between characters. The bounding box of texts are obtained by simply finding minimum bounding rectangles on binary map after thresholding character region and affinity scores.<br>
+        <img alt="fck yeah" src="./static/craft_example.gif">
+        </p><h2>Deep Text Recognition</h2><p>Two-stage Scene Text Recognition (STR), that most existing STR models fit into.<br>
+        <img alt="fck yeah" src="./static/deep_text_reco.jpg"></p><h2>Input</h2><p>Supported image types are <b>PNG, JPG, JPEG and GIF</b>. Minimum resoulution must be greater than <b>800x600</b></p><h2>Returns</h2><p>Beautiful text that are recognized from image. There is no support for Chinese, Japanese, Arabic (only Latin, bitch).
+        </p>
+    ''', params={'model_name': 'ocr, craft or text-recog'})
+class ModelService(Resource):
+    def post(self, model_name):
         if 'image' not in request.files:
             print("[ERROR] image required")
             return error_handle(json.dumps({"status" : False, "failMesagge" : "image required"}))
@@ -188,7 +214,8 @@ def parse_opt():
     return opt
 
 def init(opt):
-    # define configirations
+    print("Loading configurations")
+    # define configurations
     app.cfg = ConfigParser()
     app.cfg.read(path.abspath(opt.cfg))
 
@@ -199,9 +226,12 @@ def init(opt):
                 "link_thresh" : app.cfg.getfloat('model', 'link_thresh'), 
                 "low_text" : app.cfg.getfloat('model', 'low_text')}
 
+    print("Loading models " + opt.detec_model + ", " + opt.recog_model)
     # initialize models
     app.detec_model = Model(opt.device_id, path.abspath(opt.detec_model), thresholds = thresholds)
+    print("type of the detec_model" + str(type(app.detec_model)))
     app.recog_model = Model(opt.device_id, path.abspath(opt.recog_model), app.cfg.get('model', 'characters'))
+    print("type of the recog_model" + str(type(app.recog_model)))
 
 
 # run api 
