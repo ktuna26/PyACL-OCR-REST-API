@@ -2,5 +2,6 @@ numpy
 Pillow
 opencv-python
 scikit-image
+werkzeug
 flask-restplus==0.12.1
 flask==1.0.3
