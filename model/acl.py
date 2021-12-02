@@ -226,7 +226,7 @@ class Model(object):
         bboxes = []
         print("[INFO] loading text boxes . . .")
         for box_coord in boxes_coord:
-            bboxes.append(BBox(box_coord, 1, 0, image))
+            bboxes.append(BBox(box_coord, 1, 1, image))
         bboxes_sorted = sorted(bboxes, key=cmp_to_key(compare_alldims))
         
         print('[INFO]  {} text boxes found.'.format(len(bboxes_sorted)))

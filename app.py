@@ -85,19 +85,16 @@ def run_text_reco(image, cropped, boxes_coord):
     print("[RESULT] image texts --> ", texts)
     return texts
 
+def threshold_validate(value, field_name):
+    min=0.1
+    max=1.0
+    if not isinstance(value, float):
+        raise ValueError("Invalid literal for float(): {0}".format(field_name))
+    if min <= value <= max:
+        return value
+    raise ValueError(f"[{field_name}] must be in range [{min}, {max}]")
 
-# get configiration
-@name_space.route('/cfg', methods = ['GET'])
-class ConfigurationService(Resource):
-    def get(self):
-            cfg = {}
-            for section in app.cfg.sections():
-                cfg.update(dict(app.cfg.items(section)))
-
-            print("[RESULT] api configirations --> ", type(cfg))
-            return success_handle(json.dumps({"configirations" : cfg}))
-
-
+# ModelService swagger settings
 model_service_param_parser = reqparse.RequestParser()
 model_service_param_parser.add_argument('image',  
                          type=werkzeug.datastructures.FileStorage, 
@@ -106,10 +103,11 @@ model_service_param_parser.add_argument('image',
                          help='Image file')
 model_service_param_parser.add_argument('model_name', type=str, help='ocr, craft or text-recog', 
                                         choices=('ocr', 'craft', 'text-recog'), location='path', required=True)
-model_service_param_parser.add_argument('link_thresh', type=int, help='Some param', location='form')
-model_service_param_parser.add_argument('low_text', type=int, help='Some param', location='form')
-model_service_param_parser.add_argument('text_thresh', type=int, help='Some param', location='form')
-model_service_param_parser.add_argument('cropped', type=inputs.boolean, default=False, location='form')
+model_service_param_parser.add_argument('link_thresh', type=float, help='Link Confidence Threshold', location='form')
+model_service_param_parser.add_argument('low_text', type=float, help='Low-Bound Score', location='form')
+model_service_param_parser.add_argument('text_thresh', type=float, help='Text Confidence Threshold', location='form')
+model_service_param_parser.add_argument('cropped', type=bool, help='If only the part containing the text(word) on the image is cropped', location='form')
+model_service_param_parser.add_argument('bboxes', type=str, help='Double array which indicates indexes of corners of bounding box. Only required for craft model', location='form')
 
 # run model
 @name_space.route('/analyze/<model_name>', methods = ['POST'])
@@ -121,16 +119,41 @@ model_service_param_parser.add_argument('cropped', type=inputs.boolean, default=
         <h1>CRAFT: Character-Region Awareness For Text detection & Deep Text Recognition</h1><h2>CRAFT</h2><p>CRAFT text detector that effectively detect text area by exploring each character region and affinity between characters. The bounding box of texts are obtained by simply finding minimum bounding rectangles on binary map after thresholding character region and affinity scores.<br>
         <img alt="yeah, just like that" src="./static/craft_example.gif">
         </p><h2>Deep Text Recognition</h2><p>Two-stage Scene Text Recognition (STR), that most existing STR models fit into.<br>
-        <img alt="hit me one more time" src="./static/deep_text_reco.jpg"></p><h2>Input</h2><p>Supported image types are <b>PNG, JPG and JPEG</b>. Image and model name must be defined.<ul>
-        <li>Minimum resoulution must be greater than <b>300x300</b></li>
+        <img alt="hit me one more time" src="./static/deep_text_reco.jpg"></p><h2>Input</h2><p>Supported image types are <b>PNG, JPG and JPEG</b>. Image and model name must be defined. There 3 models which are "craft", "text-recog" and "ocr.". "ocr" model consist of sequenquential call of "craft" and "text-recog" models</p><p>text_threshold: Precision value required for a something to be classified as a letter.</p><p>link_threshold: Amount of distance allowed between two characters for them to be seen as a single word.</p><p>low_text: Amount of boundary space around the letter/word when the coordinates are returned.</p><p>cropped: If only the part containing the text(word) on the image is cropped or if the image consists of only a certain text(word), it should be activated.</p>
+        <ul>
+        <li>Minimum resoulution must be greater than <b>300x300</b> for cropped parameter is false</li>
+        <li>Maximum resoulution must be smaller than <b>300x300</b> for cropped parameter is true</li>
         <li>Model Name must be one of craft, text-recog or ocr</li>
         <li>link_thresh must be in between 0.1~1.0</li>
         <li>low_text must be in between 0.1~1.0</li>
         <li>text_thresh must be in between 0.1~1.0</li>
-        </ul></p><h2>Returns</h2><p>Recognized text in this charset: 
-        <b>0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ</b>
-        There is no support for Chinese, Japanese, Arabic (only English).
-        </p>
+        <li>cropped can be null or boolean</li>
+        </ul><p>"bboxes" parameter is only needed for "text-recog" model. bboxes must be double array which contains bounding box indexes as pixel. Order of the coordinates should be clockwise Sample :        
+[
+&nbsp;&nbsp;[
+&nbsp;&nbsp;&nbsp;&nbsp;0,&nbsp;&nbsp;&nbsp;&nbsp;|x\\top left corner
+&nbsp;&nbsp;&nbsp;&nbsp;56,&nbsp;&nbsp;|y/
+&nbsp;&nbsp;&nbsp;&nbsp;694,|x\\top right corner
+&nbsp;&nbsp;&nbsp;&nbsp;34,&nbsp;&nbsp;|y/
+&nbsp;&nbsp;&nbsp;&nbsp;694,|x\\bottom right corner
+&nbsp;&nbsp;&nbsp;&nbsp;42,&nbsp;&nbsp;|y/
+&nbsp;&nbsp;&nbsp;&nbsp;1,&nbsp;&nbsp;&nbsp;&nbsp;|x\\bottom left corner
+&nbsp;&nbsp;&nbsp;&nbsp;64&nbsp;&nbsp;&nbsp;|y/
+&nbsp;&nbsp;],
+&nbsp;&nbsp;[
+&nbsp;&nbsp;&nbsp;&nbsp;99,&nbsp;&nbsp;|
+&nbsp;&nbsp;&nbsp;&nbsp;74,&nbsp;&nbsp;|
+&nbsp;&nbsp;&nbsp;&nbsp;737,|
+&nbsp;&nbsp;&nbsp;&nbsp;56,&nbsp;&nbsp;|second
+&nbsp;&nbsp;&nbsp;&nbsp;737,|bounding
+&nbsp;&nbsp;&nbsp;&nbsp;64,&nbsp;&nbsp;|box
+&nbsp;&nbsp;&nbsp;&nbsp;100,|
+&nbsp;&nbsp;&nbsp;&nbsp;83&nbsp;&nbsp;&nbsp;|
+&nbsp;&nbsp;]
+        ]
+        </p><h2>Returns</h2><p>Accoding to selected model, output will be changed.</p><h3>text-recog and ocr</h3><p>Output of text-recog and ocr models are same. They returns recognized text in below charset: 
+        <b>0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ</b><br>
+        There is no support for Chinese, Japanese, Arabic (only English).</p><h3>craft</h3><p>craft returns coordinates of bounding boxes as double array. </p>
     '''
     )
 class ModelService(Resource):
@@ -148,6 +171,31 @@ class ModelService(Resource):
         if '.' in filename and \
            filename.rsplit('.', 1)[1].lower() not in app.file_allowed:
             return error_handle(json.dumps({"errorMessage" : "image format must be one of " + app.file_allowed}), status=400)
+            
+        # default parameters for modal
+        cropped = False
+        text_thresh = 0.7
+        link_thresh = 0.4
+        low_text = 0.4
+        
+        # get optional threshold parameter from request form
+        try:
+            if 'cropped' in request.form:
+                cropped = request.form.get('cropped', type=bool)
+            if 'text_thresh' in request.form:
+                text_thresh = request.form.get('text_thresh', type=float)
+                threshold_validate(text_thresh, 'text_thresh')
+            if 'link_thresh' in request.form:
+                link_thresh = request.form.get('link_thresh', type=float)
+                threshold_validate(link_thresh, 'link_thresh')
+            if 'low_text' in request.form:
+                low_text = request.form.get('low_text', type=float)
+                threshold_validate(low_text, 'low_text')
+        except ValueError as err:
+            return error_handle(json.dumps({"errorMessage" : "{0}".format(err)}), status=400)
+            
+        print("[INFO] cropped : %s, text_thresh : %s, link_thresh : %s, low_text%s"%(cropped, text_thresh, 
+                                                                                        link_thresh, low_text))
         
         # read the image in PIL format
         print("[INFO] loading image . . .")
@@ -160,33 +208,22 @@ class ModelService(Resource):
         
         # check min resolution
         width, height = img.size
-        if width < 300 or height <300 :
-            return error_handle(json.dumps({"errorMessage" : "Image resolution must be greater than 300x300"}), status=400)
+        if cropped == True:
+            if width > 300 or height > 300 :
+                return error_handle(json.dumps({"errorMessage" : "Cropped image resolution must be smaller than 300x300"}), status=400)
+        else:
+            if width < 300 or height < 300 :
+                return error_handle(json.dumps({"errorMessage" : "Image resolution must be greater than 300x300"}), status=400)
         
         img_rgb_plw = img.convert('RGB')
 
-        # default parameters for modal
-        cropped = False
-        text_thresh = 0.7
-        link_thresh = 0.4
-        low_text = 0.4
-
         if model_name == 'craft': # text detection
-            if 'cropped' in request.form:
-                cropped = request.form('cropped', type=bool)
-            if 'text_thresh' in request.form:
-                text_thresh = request.form.getf('text_thresh', type=float)
-            if 'link_thresh' in request.form:
-                link_thresh = request.form.get('link_thresh', type=float)
-            if 'low_text' not in request.form:
-                low_text = request.form.get('low_text', type=float)
-            
             print("[INFO] cropped : %s, text_thresh : %s, link_thresh : %s, low_text%s"%(cropped, text_thresh, 
                                                                                         link_thresh, low_text))
 
             # run CRAFT model
             boxes_coord = run_craft(img_rgb_plw, cropped, text_thresh, link_thresh, low_text)
-            return success_handle(json.dumps({"boxesCoordinate" : boxes_coord}))
+            return success_handle(json.dumps(boxes_coord))
 
         elif model_name == 'text-recog': # text recognation
             if 'bboxes' not in request.form:
@@ -194,29 +231,17 @@ class ModelService(Resource):
                 return error_handle(json.dumps({"errorMessage" : "bboxes required"}), status=400)
             else:
                 bboxes = request.form['bboxes']
-                if 'cropped' in request.form:
-                    cropped = request.form('cropped', type=bool)
-
                 print("[INFO] cropped : %s, bboxes : %s"%(cropped, bboxes))
                 
                 # read the boxes coordinate in list format
                 print("[INFO] loading boxes coordinate . . .")
-                boxes_coord = [json.loads('[%s]'%i) for i in bboxes.strip('][').split('], [')]
+                boxes_coord = json.loads(bboxes)
 
                 # run Text-Reco model
                 texts = run_text_reco(img_rgb_plw, cropped, boxes_coord)
                 return success_handle(json.dumps({"imageTexts" : texts}))
 
         elif model_name == 'ocr': # ocr
-            if 'cropped' in request.form:
-                cropped = request.form.get('cropped', type=bool)
-            if 'text_thresh' in request.form:
-                text_thresh = request.form.get('text_thresh', type=float)
-            if 'link_thresh' in request.form:
-                link_thresh = request.form.get('link_thresh', type=float)
-            if 'low_text' not in request.form:
-                low_text = request.form.get('low_text', type=float)
-            
             print("[INFO] cropped : %s, text_thresh : %s, link_thresh : %s, low_text%s"%(cropped, text_thresh, 
                                                                                         link_thresh, low_text))
 
