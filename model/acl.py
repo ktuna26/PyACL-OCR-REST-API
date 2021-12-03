@@ -125,7 +125,8 @@ class Model(object):
         print("=" * 100)
         
         
-    def run(self, img, cropped = False, poly = True, text_thresh = 0.7, link_thresh = 0.4, low_text = 0.4, boxes_coord = None): # Overloaded function
+    def run(self, img, cropped = False, poly = True, text_thresh = 0.7, link_thresh = 0.4, 
+                low_text = 0.4, boxes_coord = None): # Overloaded function
         process = Process(poly, self.characters, text_thresh, link_thresh, low_text)
         print("[PROCESS] init process success")
         
@@ -134,9 +135,9 @@ class Model(object):
             
             # resize
             mag_ratio = round((self.model_input_width / self.model_input_height), 1)
-            img_resized, target_ratio, size_heatmap = resize_aspect_ratio(img, self.model_input_width, cv2.INTER_LINEAR, mag_ratio)
-            ratio_h = ratio_w = 1 / target_ratio
-
+            img_resized,  ratio_h, ratio_w = resize_aspect_ratio(img, (self.model_input_width, 
+                                                                                               self.model_input_height), cv2.INTER_LINEAR, mag_ratio)
+            
             # preprocessing
             x = normalizeMeanVariance(img_resized)
             x = np.transpose(x, (2,0,1))    # [h, w, c] to [c, h, w]               
@@ -236,7 +237,8 @@ class Model(object):
     
     def _preprocessing(self, img):
         img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)/127.5 - 1.0
-        img_resized = cv2.resize(img_gray,(self.model_input_width, self.model_input_height ), interpolation=cv2.INTER_CUBIC)
+        img_resized = cv2.resize(img_gray,(self.model_input_width, self.model_input_height ), 
+                                                 interpolation=cv2.INTER_CUBIC)
         img_np_expanded = np.expand_dims(np.float32(img_resized), (0,1))
 
         print("[PreProc] image_np_expanded shape:", img_np_expanded.shape)
@@ -264,7 +266,8 @@ class Model(object):
         print("[ACL] img_host_ptr, img_buf_size: ", img_host_ptr, img_buf_size)
         img_dev_ptr, ret = acl.rt.malloc(img_buf_size, ACL_MEM_MALLOC_NORMAL_ONLY)
         check_ret("acl.rt.malloc", ret)
-        ret = acl.rt.memcpy(img_dev_ptr, img_buf_size, img_host_ptr, img_buf_size, ACL_MEMCPY_HOST_TO_DEVICE)
+        ret = acl.rt.memcpy(img_dev_ptr, img_buf_size, img_host_ptr, 
+                                        img_buf_size, ACL_MEMCPY_HOST_TO_DEVICE)
         check_ret("acl.rt.memcpy", ret)
         
         return img_dev_ptr, img_buf_size
