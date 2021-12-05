@@ -1,0 +1,165 @@
+{
+	"info": {
+		"_postman_id": "a76f1cb7-612d-4f9a-8a1d-9d8f4faf4561",
+		"name": "OCR",
+		"description": "Text detection and recognition from image",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "post model service",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "image",
+							"type": "file",
+							"src": "/C:/Users/k84196832/Desktop/IMG-20201201-WA0002.jpg"
+						},
+						{
+							"key": "link_thresh",
+							"value": "0.4",
+							"type": "text",
+							"disabled": true
+						},
+						{
+							"key": "low_text",
+							"value": "0.4",
+							"type": "text",
+							"disabled": true
+						},
+						{
+							"key": "text_thresh",
+							"value": "0.7",
+							"type": "text",
+							"disabled": true
+						},
+						{
+							"key": "cropped",
+							"value": "False",
+							"type": "text",
+							"disabled": true
+						},
+						{
+							"key": "bboxes",
+							"value": "[[82, 163, 334, 165, 333, 265, 81, 262], [362, 172, 488, 172, 488, 262, 362, 262], [528, 307, 772, 307, 772, 403, 528, 403], [74, 309, 322, 309, 322, 403, 74, 403], [357, 314, 495, 314, 495, 401, 357, 401], [221, 460, 645, 435, 654, 553, 230, 578], [74, 451, 200, 451, 200, 545, 74, 545]]",
+							"type": "text",
+							"disabled": true
+						}
+					]
+				},
+				"url": {
+					"raw": "10.1.6.11:8500/OCR/analyze/:model_name",
+					"host": [
+						"10",
+						"1",
+						"6",
+						"11"
+					],
+					"port": "8500",
+					"path": [
+						"OCR",
+						"analyze",
+						":model_name"
+					],
+					"variable": [
+						{
+							"key": "model_name",
+							"value": "ocr",
+							"description": "(Required) ocr, craft or text-recog"
+						}
+					]
+				},
+				"description": "<h1>OCR: Optical Character Recognition</h1>\n        <p>It is the process of converting printed or handwritten texts into digital format. This module is consist of 2 parts which are CRAFT: Character-Region Awareness For Text detection and Deep Text Recognition.<br>\n        <h2>1) CRAFT: Character-Region Awareness For Text Detection</h2>\n        <p>CRAFT text detector that effectively detect text area by exploring each character region and affinity between characters. The bounding box of texts are obtained by simply finding minimum bounding rectangles on binary map after thresholding character region and affinity scores.<br>\n        <img alt=\"craft\" src=\"./figures/craft.gif\"></p>\n        <h2>2) Deep Text Recognition</h2>\n        <p>Two-stage Scene Text Recognition (STR), that most existing STR models fit into.<br>\n        <img alt=\"deep_text_recog\" src=\"./figures/deep_text_recog.jpg\"></p>\n        <h2>Input</h2>\n        <p>Supported image types are <b>PNG, JPG and JPEG</b>. Image and model name must be defined. There 3 models which are \"craft\", \"text-recog\" and \"ocr.\". \"ocr\" model consist of sequenquential call of \"craft\" and \"text-recog\" models</p>\n        <p>text_threshold: Precision value required for a something to be classified as a letter.</p>\n        <p>link_threshold: Amount of distance allowed between two characters for them to be seen as a single word.</p>\n        <p>low_text: Amount of boundary space around the letter/word when the coordinates are returned.</p>\n        <p>cropped: If only the part containing the text(word) on the image is cropped or if the image consists of only a certain text(word), it should be activated.</p>\n        <ul>\n        <li>Minimum resoulution must be greater than <b>300x300</b> for cropped parameter is false</li>\n        <li>Maximum resoulution must be smaller than <b>300x300</b> for cropped parameter is true</li>\n        <li>Model Name must be one of craft, text-recog or ocr</li>\n        <li>link_thresh must be in between 0.1~1.0</li>\n        <li>low_text must be in between 0.1~1.0</li>\n        <li>text_thresh must be in between 0.1~1.0</li>\n        <li>cropped can be null or boolean</li>\n        </ul><p>\"bboxes\" parameter is only needed for \"text-recog\" model. bboxes must be double array which contains bounding box indexes as pixel. Order of the coordinates should be clockwise Sample :        \n[\n&nbsp;&nbsp;[\n&nbsp;&nbsp;&nbsp;&nbsp;0,&nbsp;&nbsp;&nbsp;&nbsp;|x\\top left corner\n&nbsp;&nbsp;&nbsp;&nbsp;56,&nbsp;&nbsp;|y/\n&nbsp;&nbsp;&nbsp;&nbsp;694,|x\\top right corner\n&nbsp;&nbsp;&nbsp;&nbsp;34,&nbsp;&nbsp;|y/\n&nbsp;&nbsp;&nbsp;&nbsp;694,|x\\bottom right corner\n&nbsp;&nbsp;&nbsp;&nbsp;42,&nbsp;&nbsp;|y/\n&nbsp;&nbsp;&nbsp;&nbsp;1,&nbsp;&nbsp;&nbsp;&nbsp;|x\\bottom left corner\n&nbsp;&nbsp;&nbsp;&nbsp;64&nbsp;&nbsp;&nbsp;|y/\n&nbsp;&nbsp;],\n&nbsp;&nbsp;[\n&nbsp;&nbsp;&nbsp;&nbsp;99,&nbsp;&nbsp;|\n&nbsp;&nbsp;&nbsp;&nbsp;74,&nbsp;&nbsp;|\n&nbsp;&nbsp;&nbsp;&nbsp;737,|\n&nbsp;&nbsp;&nbsp;&nbsp;56,&nbsp;&nbsp;|second\n&nbsp;&nbsp;&nbsp;&nbsp;737,|bounding\n&nbsp;&nbsp;&nbsp;&nbsp;64,&nbsp;&nbsp;|box\n&nbsp;&nbsp;&nbsp;&nbsp;100,|\n&nbsp;&nbsp;&nbsp;&nbsp;83&nbsp;&nbsp;&nbsp;|\n&nbsp;&nbsp;]\n        ]\n        </p><h2>Returns</h2><p>Accoding to selected model, output will be changed.</p>\n        <h3>craft</h3><p>craft returns coordinates of bounding boxes as double array.</p>\n        <h3>text-recog and ocr</h3><p>Output of text-recog and ocr models are same. They returns recognized text in below charset: \n        <b>0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ</b><br>\n        There is no support for Chinese, Japanese, Arabic (only English).</p>"
+			},
+			"response": [
+				{
+					"name": "Success",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "10.1.6.11:8500/OCR/analyze/:model_name",
+							"host": [
+								"10",
+								"1",
+								"6",
+								"11"
+							],
+							"port": "8500",
+							"path": [
+								"OCR",
+								"analyze",
+								":model_name"
+							],
+							"variable": [
+								{
+									"key": "model_name"
+								}
+							]
+						}
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "text",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "text/plain"
+						}
+					],
+					"cookie": [],
+					"body": ""
+				},
+				{
+					"name": "Validation Error",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "10.1.6.11:8500/OCR/analyze/:model_name",
+							"host": [
+								"10",
+								"1",
+								"6",
+								"11"
+							],
+							"port": "8500",
+							"path": [
+								"OCR",
+								"analyze",
+								":model_name"
+							],
+							"variable": [
+								{
+									"key": "model_name"
+								}
+							]
+						}
+					},
+					"status": "Bad Request",
+					"code": 400,
+					"_postman_previewlanguage": "text",
+					"header": [
+						{
+							"key": "Content-Type",
+							"value": "text/plain"
+						}
+					],
+					"cookie": [],
+					"body": ""
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "/",
+			"type": "string"
+		}
+	]
+}

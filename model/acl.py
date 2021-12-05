@@ -103,7 +103,7 @@ class Model(object):
         input_size = acl.mdl.get_num_inputs(self.model_desc)
         output_size = acl.mdl.get_num_outputs(self.model_desc)
         self._gen_output_dataset(output_size)
-        print("=" * 100)
+        print("=" * 90)
         
         print("model input size", input_size)
         for i in range(input_size):
@@ -111,7 +111,7 @@ class Model(object):
             print("model input dims", acl.mdl.get_input_dims(self.model_desc, i))
             print("model input datatype", acl.mdl.get_input_data_type(self.model_desc, i))
             self.model_input_height, self.model_input_width = acl.mdl.get_input_dims(self.model_desc, i)[0]['dims'][2:]
-        print("=" * 100)
+        print("=" * 90)
         
         print("model output size", output_size)
         for i in range(output_size):
@@ -119,10 +119,10 @@ class Model(object):
             print("model output dims", acl.mdl.get_output_dims(self.model_desc, i))
             print("model output datatype", acl.mdl.get_output_data_type(self.model_desc, i))
             self.model_output_height, self.model_output_width = acl.mdl.get_output_dims(self.model_desc, i)[0]['dims'][1:3]
-        print("=" * 100)
+        print("=" * 90)
 
         print("[MODEL] class Model init resource stage success")
-        print("=" * 100)
+        print("=" * 90)
         
         
     def run(self, img, cropped = False, poly = True, text_thresh = 0.7, link_thresh = 0.4, 
