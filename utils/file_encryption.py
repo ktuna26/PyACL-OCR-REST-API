@@ -3,7 +3,7 @@ Model Encryption Tool
 Copyright 2021 Huawei Technologies Co., Ltd
 
 Usage:
-  $ python3 model_encryption.py --model <model_name>
+  $ python3 file_encryption.py --file <file_name>
 
 CREATED:  2021-12-07 08:12:13
 MODIFIED: 2021-12-07 15:48:45

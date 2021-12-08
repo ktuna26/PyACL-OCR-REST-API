@@ -1,7 +1,16 @@
+# Docker Start Comand 
+# Copyright 2021 Huawei Technologies Co., Ltd
+# 
+# Usage:
+#   $ sudo docker_start.sh <host_port> <container_port> <image_name>
+# 
+# CREATED:  2021-11-07 15:12:13
+# MODIFIED: 2021-12-07 16:48:45
+
 #!/usr/bin/env bash
-docker_image=$1
-host_port=$2
-container_port=$3
+host_port=$1
+container_port=$2
+docker_image=$3
 docker run -it \
            -p ${host_por}:${container_port} \
            --rm \

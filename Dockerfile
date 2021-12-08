@@ -2,7 +2,7 @@
 # Copyright 2021 Huawei Technologies Co., Ltd
 # 
 # Usage:
-#   $ sudo docker build -t ascend-infer:21.0.2 \
+#   $ sudo docker build -t pyacl_ocr_api:1.0 \
 #                       --build-arg NNRT_PKG=Ascend-cann-nnrt_5.0.2_linux-x86_64.run .
 # 
 # CREATED:  2021-11-24 15:12:13
@@ -49,6 +49,8 @@ RUN umask 0022 && \
 # set workdir
 WORKDIR /pyacl_ocr_api
 
+# copy user config file into docker image
+COPY ./data/app_user.cfg /data/
 # copy the project into docker image
 COPY ./dist /pyacl_ocr_api
 
@@ -61,4 +63,4 @@ RUN cd /pyacl_ocr_api && \
 EXPOSE 8500
 
 # run the api
-ENTRYPOINT ["python3 app.py"]
+ENTRYPOINT ["python3", "app.py"]
