@@ -52,7 +52,7 @@ sudo docker_run.sh 8500 8500 pyacl_ocr_api:1.0
 ```
 
 ## File Encryption
-Please, use [utils/file_encryption.py](./utils/file_encryption.py) script to encrypt files like `*.om` and `*.cfg`, cfg file as follows
+Please, use [utils/file_encryption.py](./utils/file_encryption.py) script to encrypt files like `*.om` and `*.cfg` files as follows
 
 ```bash
 python3 file_encryption.py --model <file_name>
