@@ -8,11 +8,14 @@
 # MODIFIED: 2021-12-07 16:48:45
 
 #!/usr/bin/env bash
-host_port=$1
-container_port=$2
-docker_image=$3
+docker_image=$1
+app_user_cfg=$(find $PWD -type f | grep "$2")
+
+# read port from app_user.cfg file
+port=$((cut -d "=" -f2 <<< $(cat ${app_user_cfg} | grep port))| sed 's/ //g')
+
 docker run -it \
-           -p ${host_por}:${container_port} \
+           -p $port:$port \
            --rm \
            --ipc=host \
            --device=/dev/davinci0 \
@@ -27,4 +30,5 @@ docker run -it \
            -v /var/log/npu/dump/:/var/log/npu/dump \
            -v /var/log/npu/:/usr/slog \
            -v /usr/local/sbin/npu-smi:/usr/local/sbin/npu-smi \
+	   -v ${app_user_cfg}:/data/app_user.cfg \
            ${docker_image}
