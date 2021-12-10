@@ -2,7 +2,7 @@
 # Copyright 2021 Huawei Technologies Co., Ltd
 # 
 # Usage:
-#   $ sudo docker_start.sh <host_port> <container_port> <image_name>
+#   $ sudo docker_start.sh <image_name> <app_user_cfg>
 # 
 # CREATED:  2021-11-07 15:12:13
 # MODIFIED: 2021-12-07 16:48:45
